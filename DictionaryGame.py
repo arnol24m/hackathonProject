@@ -34,29 +34,28 @@ def get_definition():
 #step 5: send JSON
 #http://api.datamuse.com/words?rel_trg=purple&max=5&md=d
 
-#Get the JSON from the url
+#Get the data from the url
 #Method makes a request to the URL for associated words, reads the HTTP request,
-#and returns it as a JSON
-def get_original_JSON(given_URL):
+#and returns it as a list
+def get_original_data(given_URL):
     #site = requests.get(get_associations())
     #site.json()
 
-    #makes a request object
+    #makes a HTTP request object
     site = urllib.request.urlopen(given_URL)
-    print(type(site))
 
-    encoding = 'utf-8'
-    b'site'.decode(encoding)
-    #encoding = x.info().get_content_charset('utf8')  # JSON default
-    #read the HTTP request, turn it into a JSON
-#    site_data = (site.read())
-    print (type(site))
+    #read the HTTP request into bytes
+    site_data = (site.read())
 
-
+    #decode the bytes into a python object
+    site_data = json.loads(site_data.decode('utf-8'))
 
     return (site_data)
 
-
+# url data, immediate download type = bytes
+#need a python dictionary from the bytes
+#have to decode and load into a JSON
+#then load json into python object
 
 #******POTENTIAL PROBLEM***** there might not be any words that fit the parameters****************************************
 #This function randomly chooses a way for the results of the search to relate to
@@ -72,14 +71,21 @@ def rand_relation():
 
 #make the JSON that needs to be sent back
 def pretty_JSON():
-    #JSON to python object
-    words_url = get_original_JSON(get_associations())
-    print(type(words_url))
-    associated_words = json.load(words_url)
-    just_words = extract_words(associated_words)
+    headers  = "Access-Control-Allow-Origin *"
+    #get the python objecct for the data at the page of associated words
+    words_data = get_original_data(get_associations())
+    #extract the words into a new dict that doesn't have extreneous info
+    just_words = extract_words(words_data)
 
-    def_url = get_original_JSON(get_definition())
-    definition =json.load(def_url)
+    #make python object
+    def_data = get_original_data(get_definition())
+    #extract neessary info to new object
+    definition = get_key("definition", def_data)
+
+    data_json = {"Definition" : definition,
+                "Associated words": just_words
+                }
+    headers = "Access-Control-Allow-Origin *"
     #new python object that has the needed parts of the other
     #dump new object into json
     #return jason
@@ -91,7 +97,7 @@ def pretty_JSON():
 def extract_words(list_of_data):
     list_of_words = {}
     counter = 0
-    print(list_of_data)
+
     #pull out just the words from the dict, making a new dict.
     #for every key called 'word'
     #int i, the position of the sub-dictionary
@@ -99,14 +105,41 @@ def extract_words(list_of_data):
         #String key, the key in the sub-dictionary
         for key in (list_of_data[i]):
             if key == "word" :
-                print("it run")
                 list_of_words["w"+str(counter)] = list_of_data[i][key]
                 counter = counter +1
 
-    print (len(list_of_words))
+    #returns the new dict of assoc words
     return (list_of_words)
 
+def extract_definition(page_of_data):
 
+    definition_data = get_key("definition", page_of_data)
+
+#recursively search the dictionary entry for a keyword
+# I.E. search for the key 'definition' in the dictionary entry; returns the first it finds
+def get_key(key,dct):
+    if key in dct:
+        return dct[key]
+    for k in dct:
+        try:
+            return get_key(key,dct[k])
+        except (TypeError,ValueError):
+            pass
+    else:
+        raise ValueError
+
+#game play
+#called with current word that the player is on and the word they are trying to get to
+def game_play(current_word, target_word):
+    this.current_word = current_word
+    TARGET_WORD = target_word
+    pretty_JSON()
+
+
+#get_original_data(get_definition())
 #tests
 #print(extract_words(get_associations()))
-pretty_JSON()
+print(get_associations())
+url = get_associations()
+get_original_data(url)
+#pretty_JSON()
