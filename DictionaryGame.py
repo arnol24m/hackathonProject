@@ -3,6 +3,7 @@ import urllib.request
 import requests
 import random
 from random_word import RandomWords
+from requests.exceptions import HTTPError
 
 
 word_url_root = "https://api.datamuse.com/words"
@@ -17,7 +18,7 @@ def get_associations():
     Creates a URL that has a json with a list of words related to the current word
     '''
     relation = rand_relation()
-    new_word_URL = "http://api.datamuse.com/words?" + relation  + current_word +"&" + "max=50"
+    new_word_URL = "http://api.datamuse.com/words?" + relation  + "="+current_word +"&" + "max=50"
     return new_word_URL
 
 def get_definition():
@@ -48,20 +49,26 @@ def get_original_data(given_URL):
 
 
 
-#******POTENTIAL PROBLEM***** there might not be any words that fit the parameters****************************************
-#This function randomly chooses a way for the results of the search to relate to
-#the current word
-#See datamuse.com/api for the details of each code phrase
 def rand_relation():
     '''
-    Function randomly chooses a way for the 
+    Function randomly chooses a way for the current word to relate to other words
+    If there is not at least 1 result, reruns
+    TODO need to make an edge case for there not being any results for any of them
     '''
     relation_options = ["jja", "jjb", "trg", "ant", "spc", "gen", "com",\
      "par", "bga", "bgb", "rhy", "nry", "hom", "cns"]
 
     relation = random.choice(relation_options)
 
-    return "rel_" +relation
+    new_word_URL = "http://api.datamuse.com/words?" + "rel_" + relation  +"="+ current_word
+    words_data = get_original_data(new_word_URL)
+    just_words = extract_words(words_data)
+
+    #make sure it's not empty
+    if (len(just_words)) > 1:
+        return "rel_" +relation
+    else:
+        return rand_relation()
 
 #make the JSON that needs to be sent back
 def pretty_JSON():
@@ -69,7 +76,6 @@ def pretty_JSON():
     words_data = get_original_data(get_associations())
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
-
     word_list = []
     for key in just_words:
         word_list.append(just_words[key])
@@ -95,8 +101,7 @@ def pretty_JSON():
                   'Access-Control-Allow-Credentials': True
         },
         'body': {
-            json.dumps({"Associated words": word_list}),
-            json.dumps({"Definitions": definition_list})
+            json.dumps({"Associated words": word_list, "Definitions": definition_list})
             }
     }
     #new python object that has the needed parts of the other
@@ -163,11 +168,51 @@ def get_word():
 #game play
 #called with current word that the player is on and the word they are trying to get to
 def game_play(given_word):
+
     global current_word
     #Takes the word that you are going to, returns the JSON for that page
     current_word = given_word
-    print(current_word)
-    return pretty_JSON()
+    if is_word(current_word):
+        return pretty_JSON()
+    else:
+        return "Error"
+
+#TODO this fixes the problem, but it doesn't send it back very nicely.
+#Stole some of it from https://realpython.com/python-requests/#the-response
+def is_word(given_word):
+    '''
+    Check whether the word will be considered valid by the dictionary in use
+    Returns a boolean
+    '''
+
+    try:
+        word_url = get_original_data(get_definition())
+
+        response = requests.get(word_url)
+
+        # If the response was successful, no Exception will be raised
+        response.raise_for_status()
+    except HTTPError as http_err:
+        print (f'HTTP error occurred: {http_err}')
+        return False
+    except Exception as err:
+        print(f'Other error occurred: {err}')
+        return False
+    else:
+        return True
+    #look at the dictionary entry
+#TODO this is throwing a 404
+    # word_data = get_original_data(get_definition())
+    # #a word that will not work will have the title 'Word not found'
+    # for i in range(len(word_data)):
+    #     #String key, the key in the sub-dictionary
+    #     for key in (word_data[i]):
+    #         if key == "Title" :
+    #             if word_data[i][key] == "Word not found":
+    #                 return False
+    # return True
+
+
 
 
 def lambda_handler(event, context):
@@ -202,4 +247,5 @@ def lambda_handler(event, context):
     }
 
 
-# print(game_play("horse"))
+print(game_play("horse"))
+print(game_play("aerg"))
