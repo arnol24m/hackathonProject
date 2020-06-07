@@ -3,13 +3,8 @@ import urllib.request
 import requests
 import random
 
-#START_WORD = "hi"
-
-#TARGET_WORD = "bamboo"
 
 word_url_root = "https://api.datamuse.com/words"
-
-definition_URL_root = "https://api.dictionaryapi.dev/api/v1/entries/en/"
 
 current_word = ""
 #Constraints = get_Constraints
@@ -21,18 +16,7 @@ def get_associations():
     relation = rand_relation()
     new_word_URL = "http://api.datamuse.com/words?" + "rel_trg="  + current_word +"&" + "max=50"
     return new_word_URL
-#rather than having the def and word associations from the same source, the def
-#is coming from a different one for variaty's sake
-def get_definition():
-    return definition_URL_root+current_word
 
-#step 1: receive a word
-#step 2: fetch associated words from datamuse
-#step 3: fetch definition
-#you get the definition ofthe current words, and you get a list of related words**
-#step 4: format into JSON
-#step 5: send JSON
-#http://api.datamuse.com/words?rel_trg=purple&max=5&md=d
 
 #Get the data from the url
 #Method makes a request to the URL for associated words, reads the HTTP request,
@@ -76,11 +60,6 @@ def pretty_JSON():
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
 
-    #make python object
-    def_data = dict(get_original_data(get_definition()))
-    #extract neessary info to new object
-    definition = get_key("definition", def_data)
-    print(definition)
 
     return {
         'statusCode' : 200,
@@ -91,7 +70,7 @@ def pretty_JSON():
                 'Access-Control-Allow-Credentials': True
             },
         'body': {
-            "Definition" : definition,
+            # "Definition" : definition,
             "Associated words": just_words
             }
 
@@ -120,42 +99,7 @@ def extract_words(list_of_data):
                 counter = counter +1
 
     #returns the new dict of assoc words
-    return (dict(list_of_words))
-
-def extract_definition(page_of_data):
-
-    definition_data = get_key("definition", page_of_data)
-
-#recursively search the dictionary entry for a keyword
-# I.E. search for the key 'definition' in the dictionary entry; returns the first it finds
-def get_key(keyword,dct):
-    # # dct= dict(dct)
-    # #check if it is on the highest level
-    # if keyword in dct:
-    #     return dct[keyword]
-    # #recursively dig through dictionaries
-    # for i in dct:
-    #     # print("we try")
-    #     if isinstance(dct, dict):
-    #         #if the dictionary is a dictionary, it has to be accessed by keys
-    #         #the value of a keyword
-    #         value = dct[i]
-    #         if isinstance(value, dict):
-    #
-    #             return get_key(keyword, value)
-    #     if isinstance(dct, list):
-    #         if isinstance(i, int):
-    #             #then i is the index
-    #             new_dict = dct.slice(i, -1)
-    #             return get_key(keyword, new_dict)
-    #         else:
-    #             #then i is the value
-    #             index = dct.index(i)
-    #             #i need the dictionary that is at the index
-    #             #slice_object = slice(index, -1)
-    #             new_dict = dct[index]
-    #             print(new_dict)
-    #             return get_key(keyword, new_dict)
+    return list_of_words
 
 
 #game play
@@ -164,16 +108,7 @@ def game_play(given_word):
     global current_word
     #Takes the word that you are going to, returns the JSON for that page
     current_word = given_word
-    print(current_word)
     return pretty_JSON()
 
 
-#get_original_data(get_definition())
-#tests
-#print(extract_words(get_associations()))
-#print(get_associations())
-current_word="horse"
-url = get_definition()
-data=get_original_data(url)
-print(get_key("horse", data ))
-#print(game_play("horse"))
+print(game_play("horse"))
