@@ -254,9 +254,6 @@ def is_word(given_word):
 
         # If the response was successful, no Exception will be raised
         response.raise_for_status()
-    except HTTPError as http_err:
-        # print (f'HTTP error occurred: {http_err}')
-        return False
     except Exception as err:
         # print(f'Other error occurred: {err}')
         return False
@@ -265,9 +262,6 @@ def is_word(given_word):
         assoc_url = get_associations()
         response = requests.get(assoc_url)
         response.raise_for_status()
-    except HTTPError as http_err:
-        # print (f'HTTP error occurred: {http_err}')
-        return False
     except Exception as err:
         # print(f'Other error occurred: {err}')
         return False
