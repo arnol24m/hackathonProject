@@ -5,43 +5,35 @@ import random
 from random_word import RandomWords
 
 
-#START_WORD = "hi"
-
-#TARGET_WORD = "bamboo"
-
 word_url_root = "https://api.datamuse.com/words"
 
 definition_URL_root = "https://api.dictionaryapi.dev/api/v1/entries/en/"
 
+#global variable, currently empty
 current_word = ""
-#Constraints = get_Constraints
 
-## TODO: switch trigger back to relation; want this for consistency in testing some stuff
-#Creates a URL that has  a list of related
-#words. Will need to take the JSON from it
 def get_associations():
+    '''
+    Creates a URL that has a json with a list of words related to the current word
+    '''
     relation = rand_relation()
-    new_word_URL = "http://api.datamuse.com/words?" + "rel_trg="  + current_word +"&" + "max=50"
+    new_word_URL = "http://api.datamuse.com/words?" + relation  + current_word +"&" + "max=50"
     return new_word_URL
-#rather than having the def and word associations from the same source, the def
-#is coming from a different one for variaty's sake
-def get_definition():
-    return definition_URL_root+current_word
 
-#step 1: receive a word
-#step 2: fetch associated words from datamuse
-#step 3: fetch definition
-#you get the definition ofthe current words, and you get a list of related words**
-#step 4: format into JSON
-#step 5: send JSON
-#http://api.datamuse.com/words?rel_trg=purple&max=5&md=d
+def get_definition():
+    '''
+    Use the root of the url and the current word to make the url of a JSON
+    that will have the definitions and details about the current word.
+    '''
+    return definition_URL_root+current_word
 
 #Get the data from the url
 #Method makes a request to the URL for associated words, reads the HTTP request,
 #and returns it as a list
 def get_original_data(given_URL):
-    #site = requests.get(get_associations())
-    #site.json()
+    '''
+    Retrieve the data from a URL and parse it into a Python object (list/dict)
+    '''
 
     #makes a HTTP request object
     site = urllib.request.urlopen(given_URL)
@@ -54,17 +46,17 @@ def get_original_data(given_URL):
 
     return (site_data)
 
-# url data, immediate download type = bytes
-#need a python dictionary from the bytes
-#have to decode and load into a JSON
-#then load json into python object
+
 
 #******POTENTIAL PROBLEM***** there might not be any words that fit the parameters****************************************
 #This function randomly chooses a way for the results of the search to relate to
 #the current word
 #See datamuse.com/api for the details of each code phrase
 def rand_relation():
-    relation_options = ["jja", "jjb",  "trg", "ant", "spc", "gen", "com",\
+    '''
+    Function randomly chooses a way for the 
+    '''
+    relation_options = ["jja", "jjb", "trg", "ant", "spc", "gen", "com",\
      "par", "bga", "bgb", "rhy", "nry", "hom", "cns"]
 
     relation = random.choice(relation_options)
