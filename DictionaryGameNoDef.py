@@ -1,8 +1,7 @@
 import json
 import urllib.request
-import requests
 import random
-
+from random_word import RandomWords
 
 word_url_root = "https://api.datamuse.com/words"
 
@@ -101,6 +100,10 @@ def extract_words(list_of_data):
     #returns the new dict of assoc words
     return list_of_words
 
+#returns a random word with the RandomWords API
+def get_word():
+    r = RandomWords()
+    return r.get.random_word()
 
 #game play
 #called with current word that the player is on and the word they are trying to get to
