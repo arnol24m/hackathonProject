@@ -3,6 +3,7 @@ import urllib.request
 import random
 from random_word import RandomWords
 
+
 word_url_root = "https://api.datamuse.com/words"
 
 current_word = ""
@@ -59,21 +60,19 @@ def pretty_JSON():
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
 
+    word_list = []
+    for key in just_words:
+        word_list.append(just_words[key]);
 
     return {
         'statusCode' : 200,
         'headers': {
-                'Access-Control-Allow-Headers': '',
-                'Access-Control-Allow-Origin': '',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-                'Access-Control-Allow-Credentials': True
-            },
-        'body': {
-            # "Definition" : definition,
-            "Associated words": just_words
-            }
-
-    #    'statusCode': 200,
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+        },
+        'body': json.dumps({"Associated words": word_list})
     }
     #new python object that has the needed parts of the other
     #dump new object into json
@@ -113,5 +112,33 @@ def game_play(given_word):
     current_word = given_word
     return pretty_JSON()
 
-
-print(game_play("horse"))
+def lambda_handler(event, context):
+    word='test'
+    try:
+        if event:
+            if 'body' in event and event['body']:
+                body = json.loads(event['body'])
+                if 'word' in body:
+                    word = body['word']
+                    return game_play(word)
+    except Exception as e:
+        return {
+            'statusCode': 400,
+            'headers': {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+            },
+            'body': json.dumps(str(e))
+        }
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+        },
+        'body': json.dumps('Hello from Lambda! Your word is ' + word)
+    }
