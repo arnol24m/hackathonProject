@@ -78,25 +78,34 @@ def pretty_JSON():
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
 
+    word_list = []
+    for key in just_words:
+        word_list.append(just_words[key])
+
     #make python object
-    def_data = dict(get_original_data(get_definition()))
+    def_data = get_original_data(get_definition())
     #extract neessary info to new object
-    definition = get_key("definition", def_data)
-    print(definition)
+    definition = find_definition("definition", def_data)
+
+    definition_list = []
+    for i in range(len(definition)):
+        definition_list.append(definition[i])
+
+
+
 
     return {
         'statusCode' : 200,
         'headers': {
-                'Access-Control-Allow-Headers': '',
-                'Access-Control-Allow-Origin': '',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-                'Access-Control-Allow-Credentials': True
-            },
+                  'Access-Control-Allow-Headers': '*',
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                  'Access-Control-Allow-Credentials': True
+        },
         'body': {
-            "Definition" : definition,
-            "Associated words": just_words
+            json.dumps({"Associated words": word_list}),
+            json.dumps({"Definitions": definition_list})
             }
-
     }
     #new python object that has the needed parts of the other
 
@@ -119,11 +128,11 @@ def extract_words(list_of_data):
                 counter = counter +1
 
     #returns the new dict of assoc words
-    return (dict(list_of_words))
+    return list_of_words
 
 def extract_definition(page_of_data):
 
-    definition_data = get_key("definition", page_of_data)
+    definition_data = find_definition("definition", page_of_data)
 
 # #recursively search the dictionary entry for a keyword
 # # I.E. search for the key 'definition' in the dictionary entry; returns the first it finds
@@ -169,12 +178,36 @@ def game_play(given_word):
     return pretty_JSON()
 
 
-#get_original_data(get_definition())
-#tests
-#print(extract_words(get_associations()))
-#print(get_associations())
-current_word="horse"
-url = get_definition()
-data=get_original_data(url)
-print(find_definition("definition", data ))
-#print(game_play("horse"))
+def lambda_handler(event, context):
+    word='test'
+    try:
+        if event:
+            if 'body' in event and event['body']:
+                body = json.loads(event['body'])
+                if 'word' in body:
+                    word = body['word']
+                    return game_play(word)
+    except Exception as e:
+        return {
+            'statusCode': 400,
+            'headers': {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+            },
+            'body': json.dumps(str(e))
+        }
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+        },
+        'body': json.dumps('Hello from Lambda! Your word is ' + word)
+    }
+
+
+# print(game_play("horse"))
