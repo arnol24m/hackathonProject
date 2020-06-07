@@ -2,29 +2,23 @@ import json
 import urllib.request
 import requests
 import random
-from random_word import RandomWords
+from randomwordgenerator import randomwordgenerator
 
-
-#START_WORD = "hi"
-
-#TARGET_WORD = "bamboo"
 
 word_url_root = "https://api.datamuse.com/words"
 
 definition_URL_root = "https://api.dictionaryapi.dev/api/v1/entries/en/"
 
+#global variable, currently empty
 current_word = ""
-#Constraints = get_Constraints
 
-## TODO: switch trigger back to relation; want this for consistency in testing some stuff
-#Creates a URL that has  a list of related
-#words. Will need to take the JSON from it
 def get_associations():
     relation = rand_relation()
     new_word_URL = "http://api.datamuse.com/words?" + "rel_trg="  + current_word +"&" + "max=50"
     return new_word_URL
 #rather than having the def and word associations from the same source, the def
 #is coming from a different one for variaty's sake
+
 def get_definition():
     return definition_URL_root+current_word
 
@@ -40,8 +34,6 @@ def get_definition():
 #Method makes a request to the URL for associated words, reads the HTTP request,
 #and returns it as a list
 def get_original_data(given_URL):
-    #site = requests.get(get_associations())
-    #site.json()
 
     #makes a HTTP request object
     site = urllib.request.urlopen(given_URL)
@@ -102,10 +94,7 @@ def pretty_JSON():
                   'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
                   'Access-Control-Allow-Credentials': True
         },
-        'body': {
-            json.dumps({"Associated words": word_list}),
-            json.dumps({"Definitions": definition_list})
-            }
+         'body': json.dumps({"Associated words": word_list, "Definitions": definition_list})
     }
     #new python object that has the needed parts of the other
 
@@ -165,8 +154,7 @@ def find_definition(keyword, search_dict):
     return final_def
 #returns a random word with the RandomWords API
 def get_word():
-    r = RandomWords()
-    return r.get.random_word()
+    return randomwordgenerator.generate_random_words()
 
 #game play
 #called with current word that the player is on and the word they are trying to get to
@@ -179,7 +167,6 @@ def game_play(given_word):
 
 
 def lambda_handler(event, context):
-    word='test'
     try:
         if event:
             if 'body' in event and event['body']:
@@ -187,6 +174,8 @@ def lambda_handler(event, context):
                 if 'word' in body:
                     word = body['word']
                     return game_play(word)
+        word1 = get_word()
+        word2 = get_word()
     except Exception as e:
         return {
             'statusCode': 400,
@@ -206,7 +195,7 @@ def lambda_handler(event, context):
             'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
             'Access-Control-Allow-Credentials': True
         },
-        'body': json.dumps('Hello from Lambda! Your word is ' + word)
+        'body': json.dumps({'start_word': word1, 'end_word': word2})
     }
 
 
