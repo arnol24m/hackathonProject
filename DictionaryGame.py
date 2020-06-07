@@ -3,45 +3,38 @@ import urllib.request
 import requests
 import random
 from random_word import RandomWords
+from requests.exceptions import HTTPError
 
-
-#START_WORD = "hi"
-
-#TARGET_WORD = "bamboo"
 
 word_url_root = "https://api.datamuse.com/words"
 
 definition_URL_root = "https://api.dictionaryapi.dev/api/v1/entries/en/"
 
+#global variable, currently empty
 current_word = ""
-#Constraints = get_Constraints
 
-## TODO: switch trigger back to relation; want this for consistency in testing some stuff
-#Creates a URL that has  a list of related
-#words. Will need to take the JSON from it
 def get_associations():
+    '''
+    Creates a URL that has a json with a list of words related to the current word
+    '''
     relation = rand_relation()
-    new_word_URL = "http://api.datamuse.com/words?" + "rel_trg="  + current_word +"&" + "max=50"
+    new_word_URL = "http://api.datamuse.com/words?" + relation  + "="+current_word +"&" + "max=50"
     return new_word_URL
-#rather than having the def and word associations from the same source, the def
-#is coming from a different one for variaty's sake
-def get_definition():
-    return definition_URL_root+current_word
 
-#step 1: receive a word
-#step 2: fetch associated words from datamuse
-#step 3: fetch definition
-#you get the definition ofthe current words, and you get a list of related words**
-#step 4: format into JSON
-#step 5: send JSON
-#http://api.datamuse.com/words?rel_trg=purple&max=5&md=d
+def get_definition():
+    '''
+    Use the root of the url and the current word to make the url of a JSON
+    that will have the definitions and details about the current word.
+    '''
+    return definition_URL_root+current_word
 
 #Get the data from the url
 #Method makes a request to the URL for associated words, reads the HTTP request,
 #and returns it as a list
 def get_original_data(given_URL):
-    #site = requests.get(get_associations())
-    #site.json()
+    '''
+    Retrieve the data from a URL and parse it into a Python object (list/dict)
+    '''
 
     #makes a HTTP request object
     site = urllib.request.urlopen(given_URL)
@@ -54,22 +47,28 @@ def get_original_data(given_URL):
 
     return (site_data)
 
-# url data, immediate download type = bytes
-#need a python dictionary from the bytes
-#have to decode and load into a JSON
-#then load json into python object
 
-#******POTENTIAL PROBLEM***** there might not be any words that fit the parameters****************************************
-#This function randomly chooses a way for the results of the search to relate to
-#the current word
-#See datamuse.com/api for the details of each code phrase
+
 def rand_relation():
-    relation_options = ["jja", "jjb",  "trg", "ant", "spc", "gen", "com",\
+    '''
+    Function randomly chooses a way for the current word to relate to other words
+    If there is not at least 1 result, reruns
+    TODO need to make an edge case for there not being any results for any of them
+    '''
+    relation_options = ["jja", "jjb", "trg", "ant", "spc", "gen", "com",\
      "par", "bga", "bgb", "rhy", "nry", "hom", "cns"]
 
     relation = random.choice(relation_options)
 
-    return "rel_" +relation
+    new_word_URL = "http://api.datamuse.com/words?" + "rel_" + relation  +"="+ current_word
+    words_data = get_original_data(new_word_URL)
+    just_words = extract_words(words_data)
+
+    #make sure it's not empty
+    if (len(just_words)) > 1:
+        return "rel_" +relation
+    else:
+        return rand_relation()
 
 #make the JSON that needs to be sent back
 def pretty_JSON():
@@ -77,7 +76,6 @@ def pretty_JSON():
     words_data = get_original_data(get_associations())
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
-
     word_list = []
     for key in just_words:
         word_list.append(just_words[key])
@@ -103,8 +101,7 @@ def pretty_JSON():
                   'Access-Control-Allow-Credentials': True
         },
         'body': {
-            json.dumps({"Associated words": word_list}),
-            json.dumps({"Definitions": definition_list})
+            json.dumps({"Associated words": word_list, "Definitions": definition_list})
             }
     }
     #new python object that has the needed parts of the other
@@ -171,12 +168,72 @@ def get_word():
 #game play
 #called with current word that the player is on and the word they are trying to get to
 def game_play(given_word):
+
     global current_word
     #Takes the word that you are going to, returns the JSON for that page
     current_word = given_word
-    print(current_word)
-    return pretty_JSON()
+    if is_word(current_word):
+        return pretty_JSON()
+    else:
+        return "Error: That word does not seem to exist in our dictionary."
 
+#TODO this fixes the problem, but it doesn't send it back very nicely.
+#Stole some of it from https://realpython.com/python-requests/#the-response
+def is_word(given_word):
+    '''
+    Check whether the word will be considered valid by the dictionary in use
+    Returns a boolean
+    '''
+
+    try:
+        #try to run the dictionary entry url
+        word_url = get_definition()
+        response = requests.get(word_url)
+
+        # If the response was successful, no Exception will be raised
+        response.raise_for_status()
+    except HTTPError as http_err:
+        # print (f'HTTP error occurred: {http_err}')
+        return False
+    except Exception as err:
+        # print(f'Other error occurred: {err}')
+        return False
+    try:
+        #try to run the associated words url
+        assoc_url = get_associations()
+        response = requests.get(assoc_url)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        # print (f'HTTP error occurred: {http_err}')
+        return False
+    except Exception as err:
+        # print(f'Other error occurred: {err}')
+        return False
+    else:
+        #check that the word has a definition
+        if is_defined(given_word):
+            return True
+        else:
+            return False
+
+
+def is_defined(given_word):
+    '''
+    Returns a boolean
+    Precondition-- this is only called once we know that there is not a url Error
+    Called by is_word once that check is done
+    '''
+    word_data = get_original_data(get_definition())
+    #a word that will not work will have the title 'Word not found'
+    for i in range(len(word_data)):
+        #String key, the key in the sub-dictionary
+        for key in (word_data[i]):
+            if key == "Title" :
+                if word_data[i][key] == "Word not found":
+                    return False
+    #Can't test with word associations; one of the possible relations might
+    #have data, even though it's not a word.
+    return True
 
 def lambda_handler(event, context):
     word='test'
@@ -209,5 +266,6 @@ def lambda_handler(event, context):
         'body': json.dumps('Hello from Lambda! Your word is ' + word)
     }
 
-
+#Tests
 # print(game_play("horse"))
+# print(game_play("qp3rgn"))
