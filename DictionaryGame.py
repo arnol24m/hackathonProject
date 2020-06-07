@@ -161,6 +161,7 @@ def find_definition(keyword, search_dict):
                 final_def.append(result)
     return final_def
 #returns a random word with the RandomWords API
+#TODO filter out proper names
 def get_word():
     r = RandomWords()
     return r.get.random_word()
