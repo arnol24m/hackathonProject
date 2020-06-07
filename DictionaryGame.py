@@ -1,10 +1,10 @@
+import boto3
 import json
 import urllib.request
 import requests
 import random
-from random_word import RandomWords
-from requests.exceptions import HTTPError
-
+from randomwordgenerator import randomwordgenerator
+from jose import jwt
 
 word_url_root = "https://api.datamuse.com/words"
 
@@ -12,6 +12,61 @@ definition_URL_root = "https://api.dictionaryapi.dev/api/v1/entries/en/"
 
 #global variable, currently empty
 current_word = ""
+    
+def put_word(word, dynamodb=None):
+    if not dynamodb:
+        dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('Words')
+    response = table.update_item(
+        Key={
+            'Word': word
+        },
+        AttributeUpdates={
+            'clicks': {
+                'Value': 1,
+                'Action': 'ADD'
+            }
+        },
+    )
+    return response
+
+def put_user(username, score, dynamodb=None, cognito=None):
+    highscore = score
+    num_games = 1
+    if not dynamodb:
+        dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('Users')
+    # get user info from database (get_item(username))
+    response = table.get_item(
+        Key={
+            'username': username
+        }
+    )
+    # if exists, compare vals
+    if 'Item' in response:
+        user_info = response['Item']
+        if 'highscore' in user_info:
+            if int(user_info['highscore']) < highscore:
+                highscore = int(user_info['highscore'])
+        if 'games' in user_info:
+            num_games += int(user_info['games'])
+    # update databse with vals
+    response = table.update_item(
+        Key={
+            'username': username
+        },
+        AttributeUpdates={
+            'games': {
+                'Value': 1,
+                'Action': 'ADD'
+            },
+            'highscore': {
+                'Value': highscore,
+                'Action': 'PUT'
+            }
+        },
+    )
+    return {'score': score, 'highscore': highscore, 'num_games': num_games}
 
 def get_associations():
     '''
@@ -47,8 +102,6 @@ def get_original_data(given_URL):
 
     return (site_data)
 
-
-
 def rand_relation():
     '''
     Function randomly chooses a way for the current word to relate to other words
@@ -76,6 +129,7 @@ def pretty_JSON():
     words_data = get_original_data(get_associations())
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
+
     word_list = []
     for key in just_words:
         word_list.append(just_words[key])
@@ -100,9 +154,7 @@ def pretty_JSON():
                   'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
                   'Access-Control-Allow-Credentials': True
         },
-        'body': {
-            json.dumps({"Associated words": word_list, "Definitions": definition_list})
-            }
+         'body': json.dumps({"Associated words": word_list, "Definitions": definition_list})
     }
     #new python object that has the needed parts of the other
 
@@ -161,24 +213,33 @@ def find_definition(keyword, search_dict):
                 final_def.append(result)
     return final_def
 #returns a random word with the RandomWords API
-#TODO filter out proper names
 def get_word():
-    r = RandomWords()
-    return r.get.random_word()
+    return randomwordgenerator.generate_random_words()
 
 #game play
 #called with current word that the player is on and the word they are trying to get to
 def game_play(given_word):
-
     global current_word
     #Takes the word that you are going to, returns the JSON for that page
     current_word = given_word
+    try:
+        put_word(current_word) # this is putting a lot of faith in the JS to lint the word
+    except Exception as e:
+        pass
     if is_word(current_word):
         return pretty_JSON()
     else:
-        return "Error: That word does not seem to exist in our dictionary."
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                'Access-Control-Allow-Credentials': True
+            },
+            'body': ""
+        }
 
-#TODO this fixes the problem, but it doesn't send it back very nicely.
 #Stole some of it from https://realpython.com/python-requests/#the-response
 def is_word(given_word):
     '''
@@ -237,7 +298,6 @@ def is_defined(given_word):
     return True
 
 def lambda_handler(event, context):
-    word='test'
     try:
         if event:
             if 'body' in event and event['body']:
@@ -245,6 +305,32 @@ def lambda_handler(event, context):
                 if 'word' in body:
                     word = body['word']
                     return game_play(word)
+                elif 'score' in event['body']:
+                    score = body['score']
+                    token = event['headers']['Authorization']
+                    claims = jwt.get_unverified_claims(token)
+                    if 'cognito:username' in claims:
+                        username = claims['cognito:username']
+                        score_info = put_user(username, score)
+                    else:
+                        score_info = {}
+                    return {
+                        'statusCode': 200,
+                        'headers': {
+                            'Access-Control-Allow-Headers': '*',
+                            'Access-Control-Allow-Origin': '*',
+                            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                            'Access-Control-Allow-Credentials': True
+                        },
+                        'body': json.dumps(score_info)
+                    }
+        # base case -- get two random words (start and end words)
+        word1 = get_word()
+        while(word1[0].isupper()):
+            word1 = get_word()
+        word2 = get_word()
+        while(word2[0].isupper()):
+            word2 = get_word()
     except Exception as e:
         return {
             'statusCode': 400,
@@ -264,9 +350,5 @@ def lambda_handler(event, context):
             'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
             'Access-Control-Allow-Credentials': True
         },
-        'body': json.dumps('Hello from Lambda! Your word is ' + word)
+        'body': json.dumps({'start_word': word1, 'end_word': word2})
     }
-
-#Tests
-# print(game_play("horse"))
-# print(game_play("qp3rgn"))
