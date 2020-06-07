@@ -95,11 +95,8 @@ def pretty_JSON():
             "Associated words": just_words
             }
 
-    #    'statusCode': 200,
     }
     #new python object that has the needed parts of the other
-    #dump new object into json
-    #return jason
 
 
 #Extract all of the JSON words into a separate dictionary, so it doesn't have
@@ -126,36 +123,81 @@ def extract_definition(page_of_data):
 
     definition_data = get_key("definition", page_of_data)
 
-#recursively search the dictionary entry for a keyword
-# I.E. search for the key 'definition' in the dictionary entry; returns the first it finds
-def get_key(keyword,dct):
-    # # dct= dict(dct)
-    # #check if it is on the highest level
-    # if keyword in dct:
-    #     return dct[keyword]
-    # #recursively dig through dictionaries
-    # for i in dct:
-    #     # print("we try")
-    #     if isinstance(dct, dict):
-    #         #if the dictionary is a dictionary, it has to be accessed by keys
-    #         #the value of a keyword
-    #         value = dct[i]
-    #         if isinstance(value, dict):
-    #
-    #             return get_key(keyword, value)
-    #     if isinstance(dct, list):
-    #         if isinstance(i, int):
-    #             #then i is the index
-    #             new_dict = dct.slice(i, -1)
-    #             return get_key(keyword, new_dict)
-    #         else:
-    #             #then i is the value
-    #             index = dct.index(i)
-    #             #i need the dictionary that is at the index
-    #             #slice_object = slice(index, -1)
-    #             new_dict = dct[index]
-    #             print(new_dict)
-    #             return get_key(keyword, new_dict)
+# #recursively search the dictionary entry for a keyword
+# # I.E. search for the key 'definition' in the dictionary entry; returns the first it finds
+# def get_key(keyword,dct):
+#
+#
+#     # # dct= dict(dct)
+#     # #check if it is on the highest level
+#     # if keyword in dct:
+#     #     return dct[keyword]
+#     # #recursively dig through dictionaries
+#     # for i in dct:
+#     #     # print("we try")
+#     #     if isinstance(dct, dict):
+#     #         #if the dictionary is a dictionary, it has to be accessed by keys
+#     #         #the value of a keyword
+#     #         value = dct[i]
+#     #         if isinstance(value, dict):
+#     #
+#     #             return get_key(keyword, value)
+#     #     if isinstance(dct, list):
+#     #         if isinstance(i, int):
+#     #             #then i is the index
+#     #             new_dict = dct.slice(i, -1)
+#     #             return get_key(keyword, new_dict)
+#     #         else:
+#     #             #then i is the value
+#     #             index = dct.index(i)
+#     #             #i need the dictionary that is at the index
+#     #             #slice_object = slice(index, -1)
+#     #             new_dict = dct[index]
+#     #             print(new_dict)
+#     #             return get_key(keyword, new_dict)
+#
+#
+#
+#
+#
+
+
+def find_definition(search_dict, parents=[]):
+    goal = "definition"
+    if goal in search_dict:
+        return search_dict[goal]
+    final_def =[]
+    # if isinstance(search_dict, list):
+    #     final_def.extend(find_definition(value, parents + [key]))
+
+    for key in search_dict:
+        value =search_dict[key]
+        #if the value is another dicitonary
+        if isinstance(value, dict):
+            final_def.extend(find_definition(value, parents + [key]))
+        elif isinstance(value, list):
+            final_def.extend(find_definition(value, parents + [key]))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #game play
@@ -175,5 +217,5 @@ def game_play(given_word):
 current_word="horse"
 url = get_definition()
 data=get_original_data(url)
-print(get_key("horse", data ))
+print(find_definition(data ))
 #print(game_play("horse"))
