@@ -2,6 +2,8 @@ import json
 import urllib.request
 import requests
 import random
+from random_word import RandomWords
+
 
 #START_WORD = "hi"
 
@@ -62,7 +64,7 @@ def get_original_data(given_URL):
 #the current word
 #See datamuse.com/api for the details of each code phrase
 def rand_relation():
-    relation_options = ["jja", "jjb", "syn", "trg", "ant", "spc", "gen", "com",\
+    relation_options = ["jja", "jjb",  "trg", "ant", "spc", "gen", "com",\
      "par", "bga", "bgb", "rhy", "nry", "hom", "cns"]
 
     relation = random.choice(relation_options)
@@ -76,25 +78,34 @@ def pretty_JSON():
     #extract the words into a new dict that doesn't have extreneous info
     just_words = extract_words(words_data)
 
+    word_list = []
+    for key in just_words:
+        word_list.append(just_words[key])
+
     #make python object
-    def_data = dict(get_original_data(get_definition()))
+    def_data = get_original_data(get_definition())
     #extract neessary info to new object
-    definition = get_key("definition", def_data)
-    print(definition)
+    definition = find_definition("definition", def_data)
+
+    definition_list = []
+    for i in range(len(definition)):
+        definition_list.append(definition[i])
+
+
+
 
     return {
         'statusCode' : 200,
         'headers': {
-                'Access-Control-Allow-Headers': '',
-                'Access-Control-Allow-Origin': '',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-                'Access-Control-Allow-Credentials': True
-            },
+                  'Access-Control-Allow-Headers': '*',
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                  'Access-Control-Allow-Credentials': True
+        },
         'body': {
-            "Definition" : definition,
-            "Associated words": just_words
+            json.dumps({"Associated words": word_list}),
+            json.dumps({"Definitions": definition_list})
             }
-
     }
     #new python object that has the needed parts of the other
 
@@ -117,88 +128,45 @@ def extract_words(list_of_data):
                 counter = counter +1
 
     #returns the new dict of assoc words
-    return (dict(list_of_words))
+    return list_of_words
 
 def extract_definition(page_of_data):
 
-    definition_data = get_key("definition", page_of_data)
+    definition_data = find_definition("definition", page_of_data)
 
 # #recursively search the dictionary entry for a keyword
 # # I.E. search for the key 'definition' in the dictionary entry; returns the first it finds
-# def get_key(keyword,dct):
-#
-#
-#     # # dct= dict(dct)
-#     # #check if it is on the highest level
-#     # if keyword in dct:
-#     #     return dct[keyword]
-#     # #recursively dig through dictionaries
-#     # for i in dct:
-#     #     # print("we try")
-#     #     if isinstance(dct, dict):
-#     #         #if the dictionary is a dictionary, it has to be accessed by keys
-#     #         #the value of a keyword
-#     #         value = dct[i]
-#     #         if isinstance(value, dict):
-#     #
-#     #             return get_key(keyword, value)
-#     #     if isinstance(dct, list):
-#     #         if isinstance(i, int):
-#     #             #then i is the index
-#     #             new_dict = dct.slice(i, -1)
-#     #             return get_key(keyword, new_dict)
-#     #         else:
-#     #             #then i is the value
-#     #             index = dct.index(i)
-#     #             #i need the dictionary that is at the index
-#     #             #slice_object = slice(index, -1)
-#     #             new_dict = dct[index]
-#     #             print(new_dict)
-#     #             return get_key(keyword, new_dict)
-#
-#
-#
-#
-#
+'''
+Recurs
+'''
+def find_definition(keyword, search_dict):
+    # print('called')
+    # goal = "definition"
+    if keyword in search_dict:
+        return search_dict[keyword]
 
+    final_def = []
 
-def find_definition(search_dict, parents=[]):
-    goal = "definition"
-    if goal in search_dict:
-        return search_dict[goal]
-    final_def =[]
-    # if isinstance(search_dict, list):
-    #     final_def.extend(find_definition(value, parents + [key]))
-
-    for key in search_dict:
-        value =search_dict[key]
-        #if the value is another dicitonary
-        if isinstance(value, dict):
-            final_def.extend(find_definition(value, parents + [key]))
-        elif isinstance(value, list):
-            final_def.extend(find_definition(value, parents + [key]))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if isinstance(search_dict, dict):
+        for key in search_dict:
+            value = search_dict[key]
+            result = find_definition(keyword, value)
+            if isinstance(result, dict) or isinstance(result, list):
+                final_def.extend(result)
+            elif result:
+                final_def.append(result)
+    elif isinstance(search_dict, list):
+        for item in search_dict:
+            result = find_definition(keyword, item)
+            if isinstance(result, dict) or isinstance(result, list):
+                final_def.extend(result)
+            elif result:
+                final_def.append(result)
+    return final_def
+#returns a random word with the RandomWords API
+def get_word():
+    r = RandomWords()
+    return r.get.random_word()
 
 #game play
 #called with current word that the player is on and the word they are trying to get to
@@ -210,12 +178,36 @@ def game_play(given_word):
     return pretty_JSON()
 
 
-#get_original_data(get_definition())
-#tests
-#print(extract_words(get_associations()))
-#print(get_associations())
-current_word="horse"
-url = get_definition()
-data=get_original_data(url)
-print(find_definition(data ))
-#print(game_play("horse"))
+def lambda_handler(event, context):
+    word='test'
+    try:
+        if event:
+            if 'body' in event and event['body']:
+                body = json.loads(event['body'])
+                if 'word' in body:
+                    word = body['word']
+                    return game_play(word)
+    except Exception as e:
+        return {
+            'statusCode': 400,
+            'headers': {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+            },
+            'body': json.dumps(str(e))
+        }
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Credentials': True
+        },
+        'body': json.dumps('Hello from Lambda! Your word is ' + word)
+    }
+
+
+# print(game_play("horse"))
