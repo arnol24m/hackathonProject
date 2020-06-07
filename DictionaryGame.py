@@ -175,7 +175,7 @@ def game_play(given_word):
     if is_word(current_word):
         return pretty_JSON()
     else:
-        return "Error"
+        return "Error: That word does not seem to exist in our dictionary."
 
 #TODO this fixes the problem, but it doesn't send it back very nicely.
 #Stole some of it from https://realpython.com/python-requests/#the-response
@@ -186,34 +186,54 @@ def is_word(given_word):
     '''
 
     try:
-        word_url = get_original_data(get_definition())
-
+        #try to run the dictionary entry url
+        word_url = get_definition()
         response = requests.get(word_url)
 
         # If the response was successful, no Exception will be raised
         response.raise_for_status()
     except HTTPError as http_err:
-        print (f'HTTP error occurred: {http_err}')
+        # print (f'HTTP error occurred: {http_err}')
         return False
     except Exception as err:
-        print(f'Other error occurred: {err}')
+        # print(f'Other error occurred: {err}')
+        return False
+    try:
+        #try to run the associated words url
+        assoc_url = get_associations()
+        response = requests.get(assoc_url)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        # print (f'HTTP error occurred: {http_err}')
+        return False
+    except Exception as err:
+        # print(f'Other error occurred: {err}')
         return False
     else:
-        return True
-    #look at the dictionary entry
-#TODO this is throwing a 404
-    # word_data = get_original_data(get_definition())
-    # #a word that will not work will have the title 'Word not found'
-    # for i in range(len(word_data)):
-    #     #String key, the key in the sub-dictionary
-    #     for key in (word_data[i]):
-    #         if key == "Title" :
-    #             if word_data[i][key] == "Word not found":
-    #                 return False
-    # return True
+        #check that the word has a definition
+        if is_defined(given_word):
+            return True
+        else:
+            return False
 
 
-
+def is_defined(given_word):
+    '''
+    Returns a boolean
+    Precondition-- this is only called once we know that there is not a url Error
+    Called by is_word once that check is done
+    '''
+    word_data = get_original_data(get_definition())
+    #a word that will not work will have the title 'Word not found'
+    for i in range(len(word_data)):
+        #String key, the key in the sub-dictionary
+        for key in (word_data[i]):
+            if key == "Title" :
+                if word_data[i][key] == "Word not found":
+                    return False
+    #Can't test with word associations; one of the possible relations might
+    #have data, even though it's not a word.
+    return True
 
 def lambda_handler(event, context):
     word='test'
@@ -246,6 +266,6 @@ def lambda_handler(event, context):
         'body': json.dumps('Hello from Lambda! Your word is ' + word)
     }
 
-
-print(game_play("horse"))
-print(game_play("aerg"))
+#Tests
+# print(game_play("horse"))
+# print(game_play("qp3rgn"))
